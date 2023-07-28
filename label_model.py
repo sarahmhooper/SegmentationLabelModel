@@ -340,7 +340,7 @@ def run_seg_label_model(L_train, L_dev, Y_dev, seed=1):
     np.random.seed(seed)
     random.seed(seed)
 
-    # Define nodes among which we check for disagreements --- leave these as defaults we'll rearrange LFs to max disagreement
+    # Define nodes among which we check for disagreements --- leave these as defaults, we'll rearrange LFs to max disagreement
     dep_nodes = [0,1,2] # nodes among which we check for disagreements
     ind_nodes = [3,4] # nodes we keep conditionally independent for triplet method
     all_nodes = dep_nodes + ind_nodes
