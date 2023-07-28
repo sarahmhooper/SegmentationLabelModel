@@ -9,7 +9,7 @@ from multiprocessing import Pool, Lock, Manager, Process
 from pgmpy.models import MarkovModel
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.inference import BeliefPropagation
-from flyingsquid.label_model import LabelModel
+from shared_utils import compute_dice
 
 # Conditions of agreements and disagreements among LFs
 def c1(samples,i=0,j=1,k=2):
@@ -298,44 +298,6 @@ def mean_to_canonical(mean_parameter, parent_node_num, conds, theta=None, alpha=
             
     return im, theta, error_list
 
-# Helper functions for computing final metrics
-def binarize_conditionals(conds):
-    result = np.ones_like(conds)
-    result[conds<0.5] = -1
-    return result
-
-def compute_baselines(samples):
-    indicator_samples = np.zeros_like(samples)
-    indicator_samples[samples==1] = 1
-    indicator_samples = np.sum(indicator_samples,1)
-    mv = binarize_conditionals(indicator_samples/samples.shape[1])
-    intersection = binarize_conditionals(1.0*(indicator_samples>0))
-    union = binarize_conditionals(1.0*(indicator_samples==samples.shape[1]))
-    return mv, intersection, union
-    
-# Baseline PGM to compare against---non segmentation version of weak supervision
-def flying_squid(L_train, L_test, m, v, cb):
-    
-    triplet_model = LabelModel(
-        m, v,
-        [],
-        [(0, 0), (1, 0), (2, 0), (3, 0), (4, 0)],
-        [],
-#         allow_abstentions=False,
-    )
-    triplet_model.fit(
-        L_train,
-        class_balance=cb,
-        verbose=True,
-        solve_method = 'triplet_mean'
-    )
-        
-    print('Done fitting with Flying Squid, now predicting')
-    
-    test_conditionals = triplet_model.predict_proba_marginalized(L_test)
-
-    return triplet_model, test_conditionals
-
 # Functions for computing disagreements among LFs---will use to choose which LFs to use in forming conditionals
 def disagreement_count_by_col(samples,i=0,j=1,k=2):
     cond = 1.0*(samples[:,i]!=samples[:,j]) + 1.0*(samples[:,i]!=samples[:,k]) +1.0*(samples[:,j]!=samples[:,k])
@@ -364,17 +326,6 @@ def init(l):
     '''
     global lock
     lock = l
-    
-def str2bool(v):
-    if isinstance(v, bool):
-        return v
-    if v.lower() in ('yes', 'true', 't', 'y', '1'):
-        return True
-    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
-        return False
-    else:
-        raise argparse.ArgumentTypeError('Boolean value expected.')
-        
         
 def run_seg_label_model(L_train, L_dev, Y_dev, seed=1):
     """
@@ -430,8 +381,6 @@ def run_seg_label_model(L_train, L_dev, Y_dev, seed=1):
 
     empirical_matrix = sample_matrix_test.copy()
 
-    
-    
     
     ############ COMPUTE MEAN PARAMETERS ##############
     print('Computing mean parameters...')
@@ -528,7 +477,6 @@ def run_seg_label_model(L_train, L_dev, Y_dev, seed=1):
     jobs = []
     for c in range(len(cond_list)):
         gt_sign_final_node_cond = np.sign(empirical_exp_cond_lam_k_Y[c,-1]) 
-        # TODO: fix sign resolution code
         for i, node0 in enumerate(dep_nodes):
             p = Process(target=solve_trips, args=(c,i,node0,gt_sign_final_node_cond,return_dict,exp_cond_lam_i_lam_k_given_C,cond_probs))
             jobs.append(p)
@@ -544,8 +492,6 @@ def run_seg_label_model(L_train, L_dev, Y_dev, seed=1):
 
     proposed_exp_cond_lam_0_Y = proposed_exp_cond_lam_dep_Y[:,0]
     print('Done with estimating mean parameters, starting backwards mapping...')
-
-    
     
 
     #################### BACKWARDS MAPPING ####################
@@ -572,8 +518,6 @@ def run_seg_label_model(L_train, L_dev, Y_dev, seed=1):
     print('Done with backwards mapping, starting computing conditionals...')
 
     
-    
-    
     #################### MAKE ESTIMATED PMF ####################
     # Get distribution using estimated canonical params
     lst = list(map(list, itertools.product([-1, 1], repeat=len(all_nodes)+1))) 
@@ -583,8 +527,6 @@ def run_seg_label_model(L_train, L_dev, Y_dev, seed=1):
     est_theta_lam = 0 #theta_est['value'].values[9:13] # Not estimating currently
     proposed_thetas = [est_theta_y,est_theta_ind,est_theta_dep,est_theta_lam]
     proposed_pmf = make_pmf(*proposed_thetas,lst,comp=1)
-
-    
     
     
     #################### COMPUTE ESTIMATED CONDITIONAL PROBABILITIES ####################

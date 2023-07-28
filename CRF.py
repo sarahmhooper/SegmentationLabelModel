@@ -2,15 +2,7 @@ import denseCRF, denseCRF3D, maxflow
 import numpy as np
 import random
 from tqdm import tqdm 
-
-def compute_dice(mask1, mask2):
-    
-    assert list(np.unique(mask1)) == [0,1] or list(np.unique(mask1)) == [0] or list(np.unique(mask1)) == [1]
-    assert list(np.unique(mask2)) == [0,1] or list(np.unique(mask2)) == [0] or list(np.unique(mask2)) == [1]
-    area_overlap = np.sum(np.logical_and(mask1,mask2))
-    total_pix = np.sum(mask1) + np.sum(mask2)
-    if total_pix==0: return 1
-    return 2 * area_overlap / float(total_pix)
+from shared_utils import compute_dice
 
 def run_maxflow3d(img_data,prob_data,l,s):
     
@@ -88,3 +80,5 @@ def run_crf(train_images, train_weak_labels, dev_images, dev_weak_labels, dev_ma
         dev_final_labels += [out_seg]
     
     return train_final_labels, dev_final_labels
+
+
