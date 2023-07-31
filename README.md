@@ -10,4 +10,4 @@ Any segmentation network can be used for step (1), for example training a one-sh
 ![plot](end_to_end_pipeline.png)
 
 ## Usage
-To use this code, clone the repo and install the required pacakges using the requirements.txt file. The ``run_conditional_WS.ipynb`` notebook will walk you through how to use the proposed label aggregation method on synthetic data as well as custom data.
+To use this code, clone the repo and install the required pacakges using the ``requirements.txt`` file. The ``run_conditional_WS.ipynb`` notebook will walk you through how to use the proposed label aggregation method on synthetic data as well as custom data.
